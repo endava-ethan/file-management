@@ -15,7 +15,7 @@ fs:
     - "**/.github/**"
 spring:
   main:
-    web-application-type: servlet
+    web-application-type: reactive
 management:
   endpoints:
     web:

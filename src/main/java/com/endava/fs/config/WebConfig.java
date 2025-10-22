@@ -1,12 +1,12 @@
 package com.endava.fs.config;
 
 import com.endava.fs.security.ApiKeyInterceptor;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.server.WebFilter;
 
 @Configuration
-public class WebConfig implements WebMvcConfigurer {
+public class WebConfig {
 
     private final SecurityProperties securityProperties;
 
@@ -14,9 +14,8 @@ public class WebConfig implements WebMvcConfigurer {
         this.securityProperties = securityProperties;
     }
 
-    @Override
-    public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new ApiKeyInterceptor(securityProperties.apiKey()))
-                .addPathPatterns("/fs/**");
+    @Bean
+    public WebFilter apiKeyFilter() {
+        return new ApiKeyInterceptor(securityProperties.apiKey());
     }
 }

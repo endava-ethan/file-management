@@ -1,17 +1,19 @@
 package com.endava.fs.security;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Mono;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-public class ApiKeyInterceptor implements HandlerInterceptor {
+public class ApiKeyInterceptor implements WebFilter {
 
     public static final String REQUEST_ATTRIBUTE_USER = "authenticatedUser";
+    private static final String PROTECTED_PATH_PREFIX = "/fs";
     private final String requiredKey;
 
     public ApiKeyInterceptor(String requiredKey) {
@@ -19,17 +21,22 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
     }
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws IOException {
-        String providedKey = request.getHeader("X-Api-Key");
-        if (requiredKey.equals(providedKey)) {
-            request.setAttribute(REQUEST_ATTRIBUTE_USER, "api-key");
-            return true;
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        String path = exchange.getRequest().getPath().value();
+        if (!path.startsWith(PROTECTED_PATH_PREFIX)) {
+            return chain.filter(exchange);
         }
-        response.setStatus(HttpStatus.UNAUTHORIZED.value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.getWriter().write("{\"message\":\"Invalid or missing API key\"}");
-        response.getWriter().flush();
-        return false;
+
+        String providedKey = exchange.getRequest().getHeaders().getFirst("X-Api-Key");
+        if (requiredKey.equals(providedKey)) {
+            exchange.getAttributes().put(REQUEST_ATTRIBUTE_USER, "api-key");
+            return chain.filter(exchange);
+        }
+
+        byte[] payload = "{\"message\":\"Invalid or missing API key\"}".getBytes(StandardCharsets.UTF_8);
+        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(payload);
+        return exchange.getResponse().writeWith(Mono.just(buffer));
     }
 }

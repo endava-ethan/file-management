@@ -11,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,7 +51,12 @@ public class FsService {
         initialiseRoot();
     }
 
-    public List<FileEntry> list(String glob) {
+    public Mono<List<FileEntry>> list(String glob) {
+        return Mono.fromCallable(() -> doList(glob))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private List<FileEntry> doList(String glob) {
         String pattern = (glob == null || glob.isBlank()) ? "**/*" : glob;
         PathMatcher matcher = compileMatcher(pattern);
         try (Stream<Path> stream = Files.walk(root)) {
@@ -65,7 +72,12 @@ public class FsService {
         }
     }
 
-    public ReadResult read(ReadRequest request) {
+    public Mono<ReadResult> read(ReadRequest request) {
+        return Mono.fromCallable(() -> doRead(request))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private ReadResult doRead(ReadRequest request) {
         Path target = resolvePath(request.path());
         ensureNoSymbolicLinks(target);
         if (!Files.exists(target)) {
@@ -86,7 +98,12 @@ public class FsService {
         }
     }
 
-    public WriteResult write(WriteRequest request) {
+    public Mono<WriteResult> write(WriteRequest request) {
+        return Mono.fromCallable(() -> doWrite(request))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private WriteResult doWrite(WriteRequest request) {
         Path target = resolvePath(request.path());
         // ensureAllowed(target);
         Path parent = target.getParent();
