@@ -1,0 +1,23 @@
+server:
+  address: 127.0.0.1
+  port: 8089
+security:
+  api-key: dev-123
+fs:
+  rootDir: C:/Users/echeah/Github/file-management/demo-root
+  allow:
+    - "**/*.md"
+    - "*.md"
+    - "**/*.yml"
+    - "**/*.yaml"
+    - ".gitignore"
+    - "pom.xml"
+    - "**/.github/**"
+spring:
+  main:
+    web-application-type: servlet
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
